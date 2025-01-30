@@ -29,43 +29,40 @@ def crypto_price_prediction(coin):
             return None
     
     def fetch_crypto_data(symbol, valid_symbol):
-        """获取指定加密货币数据"""
-        print(f"\n正在获取 {symbol} 的过去7天每小时数据...")
-        
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=7)
-        
-        start_ts = int(start_date.timestamp() * 1000)
-        end_ts = int(end_date.timestamp() * 1000)
-        
-        url = f'https://api-pub.bitfinex.com/v2/candles/trade:1h:{valid_symbol}/hist'
-        params = {"start": start_ts, "end": end_ts, "sort": 1, "limit": 1000}
-        
-        try:
-            response = requests.get(url, params=params, timeout=15)
-            response.raise_for_status()
-            data = response.json()
-            
-            if not data:
-                print("警告：获取到空数据集")
-                return None
-                
-            df = pd.DataFrame(data, columns=["timestamp", "open", "close", "high", "low", "volume"])
-            df['change'] = (df['close'] - df['open']) / df['open'] * 100
-            df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)  # 确保 timestamp 转换为 datetime
-
-            
-            df = df.dropna(subset=['open', 'close'])
-            df = df.sort_values('datetime')
-            
-            return df[['datetime', 'open', 'high', 'low', 'close', 'volume', 'change']]
-        
-        except requests.exceptions.HTTPError as e:
-            print(f"API错误：{str(e)}")
-            print(f"响应内容：{response.text[:200]}")
-        except Exception as e:
-            print(f"获取数据失败：{str(e)}")
-        
+      """获取指定加密货币数据"""
+      print(f"\n正在获取 {symbol} 的过去7天每小时数据...")
+      
+      end_date = datetime.now()
+      start_date = end_date - timedelta(days=7)
+      
+      start_ts = int(start_date.timestamp() * 1000)
+      end_ts = int(end_date.timestamp() * 1000)
+      
+      url = f'https://api-pub.bitfinex.com/v2/candles/trade:1h:{valid_symbol}/hist'
+      params = {"start": start_ts, "end": end_ts, "sort": 1, "limit": 1000}
+      
+      try:
+        response = requests.get(url, params=params, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+          
+        if not data:
+            print("警告：获取到空数据集")
+            return None
+              
+        df = pd.DataFrame(data, columns=["timestamp", "open", "close", "high", "low", "volume"])
+        df['change'] = (df['close'] - df['open']) / df['open'] * 100
+        df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
+        df.set_index('datetime', inplace=True)  # 设置 datetime 为索引
+        df = df.sort_index()
+        return df[['open', 'high', 'low', 'close', 'volume', 'change']]
+    
+      except requests.exceptions.HTTPError as e:
+        print(f"API错误：{str(e)}")
+        print(f"响应内容：{response.text[:200]}")
+        return None
+      except Exception as e:
+        print(f"获取数据失败：{str(e)}")
         return None
 
     # 获取有效交易对
@@ -83,7 +80,7 @@ def crypto_price_prediction(coin):
     
     # 数据处理和预测
     features = ['open', 'high', 'low', 'close', 'volume', 'change']
-    recent_days = 7 * 24  # 7 天数据（每小时）
+    recent_days = 7 * 24
     data_nt = df[features].dropna().iloc[-recent_days:]
     
     scaler = MinMaxScaler()
@@ -101,13 +98,21 @@ def crypto_price_prediction(coin):
     ).reshape(output_steps, len(features))
 
     # 构造预测结果 DataFrame
-    future_dates = pd.date_range(start=data.index[-1] + pd.Timedelta(hours=1), periods=output_steps, freq='H')
+    future_dates = pd.date_range(
+        start=df.index[-1] + pd.Timedelta(hours=1),  # 关键修复：使用 df 而非 data
+        periods=output_steps, 
+        freq='H'
+    )
     
-    predicted_df = pd.DataFrame(index=future_dates, data=prediction_actual, columns=features)
+    predicted_df = pd.DataFrame(
+        index=future_dates, 
+        data=prediction_actual, 
+        columns=features
+    )
 
-    # 获取最后 2 天的历史数据
+        # 获取最后 2 天的历史数据
     history_days = 2 * 24
-    historical = data.iloc[-history_days:]
+    historical = df.iloc[-history_days:]  # 使用 df 而非 data
 
     # 可视化结果
     plt.figure(figsize=(15, 10))
@@ -149,8 +154,8 @@ def crypto_price_prediction(coin):
     last_column = final_df.columns[-1]
     final_df = final_df[[last_column] + [col for col in final_df.columns if col != last_column]]
 
-    predict_results = final_df.values.tolist()
-    final_df.to_csv(f'{coin}_last_hour_prediction.csv')
+    predict_results = final_df.to_dict()
+
 
     print(f"\n最终数据已保存至 {coin}_last_hour_prediction.csv")
     
