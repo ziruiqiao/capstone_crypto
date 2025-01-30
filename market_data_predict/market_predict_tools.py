@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import load_model
 
+df = pd.read_csv('/content/example_prediction_result.csv')
+
+crypto_symbol = df.columns[1].split('_')[0]
+current_time = df.iloc[0, 0]
 
 def predict_future_price(crypto_symbol: str, current_time: int = int(time.time())):
     """
