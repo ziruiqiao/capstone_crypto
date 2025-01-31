@@ -1,2 +1,10 @@
 praw
 nltk
+langchain
+langchain-ollama
+pandas
+numpy
+matplotlib
+scikit-learn
+tensorflow
+jupyter
