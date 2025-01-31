@@ -5,6 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import load_model
+from sentiment_predict.sentiment_tools_variables import logging
+
+logger = logging.getLogger(__name__)
+
 
 def crypto_price_prediction(coin):
     """
@@ -30,7 +34,7 @@ def crypto_price_prediction(coin):
     
     def fetch_crypto_data(symbol, valid_symbol):
       """获取指定加密货币数据"""
-      print(f"\n正在获取 {symbol} 的过去7天每小时数据...")
+      logger.debug(f"\n正在获取 {symbol} 的过去7天每小时数据...")
       
       end_date = datetime.now()
       start_date = end_date - timedelta(days=7)
@@ -47,7 +51,7 @@ def crypto_price_prediction(coin):
         data = response.json()
           
         if not data:
-            print("警告：获取到空数据集")
+            logger.error("警告：获取到空数据集")
             return None
               
         df = pd.DataFrame(data, columns=["timestamp", "open", "close", "high", "low", "volume"])
@@ -58,24 +62,24 @@ def crypto_price_prediction(coin):
         return df[['open', 'high', 'low', 'close', 'volume', 'change']]
     
       except requests.exceptions.HTTPError as e:
-        print(f"API错误：{str(e)}")
-        print(f"响应内容：{response.text[:200]}")
+        logger.error(f"API错误：{str(e)}")
+        logger.error(f"响应内容：{response.text[:200]}")
         return None
       except Exception as e:
-        print(f"获取数据失败：{str(e)}")
+        logger.error(f"获取数据失败：{str(e)}")
         return None
 
     # 获取有效交易对
     valid_symbol = validate_crypto_symbol(coin)
     if valid_symbol is None:
-        print(f"错误：{coin} 不是有效的交易对")
+        logger.error(f"错误：{coin} 不是有效的交易对")
         return None
 
     # 获取数据
     df = fetch_crypto_data(coin, valid_symbol)
     
     if df is None or df.empty:
-        print("无法获取有效数据")
+        logger.error("无法获取有效数据")
         return None
     
     # 数据处理和预测
@@ -90,7 +94,7 @@ def crypto_price_prediction(coin):
     output_steps = 24  # 预测 1 天
     X_latest = np.expand_dims(scaled_data, axis=0)
     
-    model = load_model("lstm_model.keras")
+    model = load_model("market_data_predict/lstm_model.keras")
     prediction_scaled = model.predict(X_latest)
     
     prediction_actual = scaler.inverse_transform(
@@ -134,7 +138,7 @@ def crypto_price_prediction(coin):
         plt.grid(True)
 
     plt.tight_layout()
-    plt.savefig(f'{coin}_prediction_visualization.png')
+    plt.savefig(f'data/{coin}_prediction_visualization.png')
     plt.show()
 
     # 只保留 close, change, volume
@@ -157,6 +161,6 @@ def crypto_price_prediction(coin):
     predict_results = final_df.to_dict()
 
 
-    print(f"\n最终数据已保存至 {coin}_last_hour_prediction.csv")
+    logger.debug(f"\n最终数据已保存至 {coin}_last_hour_prediction.csv")
     
     return predict_results
