@@ -4,7 +4,7 @@ import praw
 from datetime import datetime
 
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from sentiment_predict.sentiment_tools_variables import *
+from .sentiment_tools_variables import *
 from praw.models.reddit.submission import Submission
 
 sia = SentimentIntensityAnalyzer()
@@ -161,4 +161,3 @@ def get_sentiment_score_seq(posts: list, current_time: int = int(time.time()), s
     results.reverse()
 
     return results
-
