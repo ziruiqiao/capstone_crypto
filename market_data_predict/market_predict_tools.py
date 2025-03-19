@@ -94,7 +94,7 @@ def crypto_price_prediction(coin):
     output_steps = 24  # 预测 1 天
     X_latest = np.expand_dims(scaled_data, axis=0)
     
-    model = load_model("market_data_predict/lstm_model.keras")
+    model = load_model("market_data_predict/tra_model.keras")
     prediction_scaled = model.predict(X_latest)
     
     prediction_actual = scaler.inverse_transform(
